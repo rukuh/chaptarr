@@ -785,8 +785,16 @@ namespace NzbDrone.Core.Books.Services
                 .ToList();
             if (candidates.Count > 1)
             {
-                throw new InvalidOperationException(
-                    $"Selected work '{workProviderId}' resolves to multiple local {mediaType} book rows.");
+                _logger.Warn(
+                    "Selected work '{0}' resolves to {1} local {2} book rows for author '{3}'. Selecting canonical survivor.",
+                    workProviderId, candidates.Count, mediaType, localAuthor.Name);
+
+                return candidates
+                    .OrderByDescending(b => b.BookFiles?.Any() == true)
+                    .ThenByDescending(b => b.AudiobookMonitored || b.EbookMonitored)
+                    .ThenByDescending(b => b.AddOptions?.AddType == BookAddType.Manual)
+                    .ThenBy(b => b.Id)
+                    .First();
             }
 
             return candidates.SingleOrDefault();
@@ -1806,12 +1814,19 @@ namespace NzbDrone.Core.Books.Services
             var ebookInitialMode = config.CreateEbook && config.EbookMonitorExistingMode != MonitorTypes.SpecificBook
                 ? config.EbookMonitorExistingMode
                 : null;
-            if (audiobookInitialMode.HasValue || ebookInitialMode.HasValue || config.SearchForMissingBooks == true)
+            var isSpecificBook = config.AudiobookMonitorExistingMode == MonitorTypes.SpecificBook ||
+                                 config.EbookMonitorExistingMode == MonitorTypes.SpecificBook ||
+                                 config.MonitorMode == MonitorTypes.SpecificBook ||
+                                 config.AudiobookBooksToMonitor?.Any() == true ||
+                                 config.EbookBooksToMonitor?.Any() == true ||
+                                 config.SpecificBookProviderIds?.Any() == true;
+            var shouldSearchAuthor = !isSpecificBook && config.SearchForMissingBooks == true;
+            if (audiobookInitialMode.HasValue || ebookInitialMode.HasValue || shouldSearchAuthor)
             {
                 author.AddOptions ??= new AddAuthorOptions();
                 author.AddOptions.AudiobookMonitor = audiobookInitialMode;
                 author.AddOptions.EbookMonitor = ebookInitialMode;
-                author.AddOptions.SearchForMissingBooks = config.SearchForMissingBooks == true;
+                author.AddOptions.SearchForMissingBooks = shouldSearchAuthor;
             }
 
             // Apply audiobook settings only when this add request configured audiobook support.

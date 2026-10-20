@@ -993,6 +993,66 @@ namespace Chaptarr.Core.Test.Books
             });
         }
 
+        [Test]
+        public async Task add_author_should_not_create_add_options_or_search_missing_when_monitoring_specific_book()
+        {
+            var canonicalWork = BuildAudiobook("The Count of Monte Cristo", "hc:1151710", "gr:391568");
+            canonicalWork.GoodreadsWorkId = "gr:182750455";
+
+            var otherBook = BuildAudiobook("The Three Musketeers", "hc:1151711", "gr:11588");
+            otherBook.GoodreadsWorkId = "gr:1263215";
+
+            var remoteAuthor = new Author
+            {
+                Name = "Alexandre Dumas",
+                Books = new List<Book>
+                {
+                    canonicalWork,
+                    otherBook
+                },
+                Series = new List<Series>()
+            };
+
+            var bookService = new StubBookService();
+            var service = new AuthorLibraryService(
+                authorService: new StubAuthorService(),
+                authorInfo: new StubAuthorInfo(remoteAuthor),
+                bookService: bookService,
+                refreshSeriesService: null,
+                editionService: new StubEditionService(),
+                narratorLinkService: null,
+                metadataProfileService: new StubMetadataProfileService(),
+                qualityProfileService: new TestQualityProfileService(),
+                authorPathBuilder: new StubAuthorPathBuilder(),
+                rootFolderService: new StubRootFolderService(BuildAudiobookRoot("/audiobooks")),
+                commandQueueManager: null,
+                eventAggregator: new StubEventAggregator(),
+                pendingImportService: null,
+                mainDatabase: null,
+                importListExclusionService: null,
+                editionMetadataProfileFilter: new EditionMetadataProfileFilter(new TestTermMatcherService()),
+                syncMetadataService: null,
+                logger: LogManager.GetCurrentClassLogger(),
+                editionSelector: new EditionSelector(LogManager.GetCurrentClassLogger()));
+
+            var result = await service.AddAuthorAsync("gr:4785", new MonitoringConfig
+            {
+                AuthorName = remoteAuthor.Name,
+                CreateAudiobook = true,
+                CreateEbook = false,
+                AudiobookQualityProfileId = 2,
+                AudiobookMetadataProfileId = 1,
+                AudiobookRootFolderPath = "/audiobooks",
+                AudiobookMonitored = true,
+                AudiobookMonitorExistingMode = MonitorTypes.SpecificBook,
+                AudiobookMonitorNewItems = NewItemMonitorTypes.None,
+                AudiobookBooksToMonitor = new List<string> { "gr:391568" },
+                SearchForMissingBooks = true
+            });
+
+            Assert.That(result.AddOptions, Is.Null, "AddOptions must remain null so post-scan does not widen book monitoring or queue author-wide search");
+        }
+
         private static Book BuildAudiobook(string title, string hardcoverBookId, params string[] remoteProviderIds)
         {
             return new Book
