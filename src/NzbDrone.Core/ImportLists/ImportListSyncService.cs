@@ -185,7 +185,7 @@ namespace NzbDrone.Core.ImportLists
             config.QueueIfUnavailable = true;
             config.RequestedBy = $"ImportList:{importList.Name}";
             config.AuthorName = authorName;
-            config.SearchForMissingBooks = importList.ShouldSearch;
+            config.SearchForMissingBooks = importList.ShouldSearch && importList.ShouldMonitor != ImportListMonitorType.SpecificBook;
 
             if (importList.ShouldMonitor == ImportListMonitorType.SpecificBook &&
                 booksToMonitor != null &&
@@ -193,6 +193,12 @@ namespace NzbDrone.Core.ImportLists
             {
                 config.AudiobookBooksToMonitor = monitorLists.audiobookBooks?.ToList();
                 config.EbookBooksToMonitor = monitorLists.ebookBooks?.ToList();
+
+                if (importList.ShouldSearch)
+                {
+                    config.AudiobookBooksToSearch = monitorLists.audiobookBooks?.ToList();
+                    config.EbookBooksToSearch = monitorLists.ebookBooks?.ToList();
+                }
             }
 
             EnableRequestedMediaGates(config);
@@ -286,7 +292,7 @@ namespace NzbDrone.Core.ImportLists
             config.QueueIfUnavailable = true;
             config.RequestedBy = $"ImportList:{importList.Name}";
             config.AuthorName = authorName;
-            config.SearchForMissingBooks = importList.ShouldSearch;
+            config.SearchForMissingBooks = importList.ShouldSearch && importList.ShouldMonitor != ImportListMonitorType.SpecificBook;
 
             if (importList.ShouldMonitor == ImportListMonitorType.SpecificBook &&
                 booksToMonitor != null &&
@@ -294,6 +300,12 @@ namespace NzbDrone.Core.ImportLists
             {
                 config.AudiobookBooksToMonitor = monitorLists.audiobookBooks?.ToList();
                 config.EbookBooksToMonitor = monitorLists.ebookBooks?.ToList();
+
+                if (importList.ShouldSearch)
+                {
+                    config.AudiobookBooksToSearch = monitorLists.audiobookBooks?.ToList();
+                    config.EbookBooksToSearch = monitorLists.ebookBooks?.ToList();
+                }
             }
 
             EnableRequestedMediaGates(config);
@@ -317,7 +329,7 @@ namespace NzbDrone.Core.ImportLists
             config.QueueIfUnavailable = true;
             config.RequestedBy ??= $"ImportList:{importList?.Name ?? "Unknown"}";
             config.AuthorName ??= authorName;
-            config.SearchForMissingBooks ??= importList?.ShouldSearch ?? false;
+            config.SearchForMissingBooks ??= (importList?.ShouldSearch == true && importList?.ShouldMonitor != ImportListMonitorType.SpecificBook);
 
             var pendingId = _pendingAuthorImportService.EnqueueAsync(authorProviderId, config, config.RequestedBy)
                 .GetAwaiter()
@@ -376,6 +388,22 @@ namespace NzbDrone.Core.ImportLists
                 {
                     config.EbookBooksToMonitor.Add(item.bookProviderId);
                 }
+
+                if (importList.ShouldSearch)
+                {
+                    config.AudiobookBooksToSearch ??= new List<string>();
+                    config.EbookBooksToSearch ??= new List<string>();
+
+                    if (!config.AudiobookBooksToSearch.Contains(item.bookProviderId, StringComparer.OrdinalIgnoreCase))
+                    {
+                        config.AudiobookBooksToSearch.Add(item.bookProviderId);
+                    }
+
+                    if (!config.EbookBooksToSearch.Contains(item.bookProviderId, StringComparer.OrdinalIgnoreCase))
+                    {
+                        config.EbookBooksToSearch.Add(item.bookProviderId);
+                    }
+                }
             }
 
             EnableRequestedMediaGates(config);
@@ -433,7 +461,8 @@ namespace NzbDrone.Core.ImportLists
                 EbookRootFolderPath = importList.RootFolderPath,
                 AudiobookTags = tags,
                 EbookTags = tags,
-                Tags = tags
+                Tags = tags,
+                SearchForMissingBooks = importList.ShouldSearch && importList.ShouldMonitor != ImportListMonitorType.SpecificBook
             };
 
             return config;
@@ -2418,6 +2447,22 @@ namespace NzbDrone.Core.ImportLists
                                     if (!config.EbookBooksToMonitor.Contains(bookProviderId, StringComparer.OrdinalIgnoreCase))
                                     {
                                         config.EbookBooksToMonitor.Add(bookProviderId);
+                                    }
+
+                                    if (importList.ShouldSearch)
+                                    {
+                                        config.AudiobookBooksToSearch ??= new List<string>();
+                                        config.EbookBooksToSearch ??= new List<string>();
+
+                                        if (!config.AudiobookBooksToSearch.Contains(bookProviderId, StringComparer.OrdinalIgnoreCase))
+                                        {
+                                            config.AudiobookBooksToSearch.Add(bookProviderId);
+                                        }
+
+                                        if (!config.EbookBooksToSearch.Contains(bookProviderId, StringComparer.OrdinalIgnoreCase))
+                                        {
+                                            config.EbookBooksToSearch.Add(bookProviderId);
+                                        }
                                     }
                                 }
 

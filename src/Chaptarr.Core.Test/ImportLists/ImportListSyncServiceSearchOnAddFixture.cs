@@ -914,10 +914,12 @@ namespace Chaptarr.Core.Test.ImportLists
             Assert.That(finalConfig.AudiobookMonitored, Is.True);
             Assert.That(finalConfig.AudiobookMonitorExistingMode, Is.EqualTo(MonitorTypes.SpecificBook));
             Assert.That(finalConfig.AudiobookBooksToMonitor, Is.EqualTo(new[] { "gr:123" }));
+            Assert.That(finalConfig.AudiobookBooksToSearch, Is.EqualTo(new[] { "gr:123" }));
             Assert.That(finalConfig.EbookMonitored, Is.Null);
             Assert.That(finalConfig.EbookMonitorExistingMode, Is.EqualTo(MonitorTypes.None));
             Assert.That(finalConfig.EbookBooksToMonitor, Is.Empty);
-            Assert.That(finalConfig.SearchForMissingBooks, Is.True);
+            Assert.That(finalConfig.EbookBooksToSearch, Is.Null.Or.Empty);
+            Assert.That(finalConfig.SearchForMissingBooks, Is.False);
 
             var pendingDrain = commandQueue.Pushed.OfType<ProcessPendingImportsCommand>().Single();
             Assert.That(pendingDrain.ContinueUntilEmpty, Is.True);
